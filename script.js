@@ -5,9 +5,10 @@ const itemBtn = document.querySelector('#submit')
 const deleteBtn = document.querySelector('#delete')
 const clearBtn = document.querySelector('#clear')
 const filter = document.querySelector('#filter-Btn')
+let editMode = false
+const btnClasses = 'remove-item btn-link text-red'
+const iClasses = 'fa-solid fa-xmark'
 
-const btnClasses = document.querySelector('#classes').classList
-const iClasses = document.querySelector('#iclasses').classList
 
 function add(e){
         e.preventDefault()
@@ -16,18 +17,61 @@ function add(e){
             alert('enter something')
             return;
         }
-        const i = addItem(item)
-        itemList.appendChild(i)
-        checkUI()
+        if(editMode){
+            const toEdit = itemList.querySelector('.edit-mode')
+            toEdit.classList.remove('edit-mode')
+            toEdit.remove()
+            removeFromStorage(toEdit.textContent)
+        }else{
+            if(exist(item)){
+                alert('Item already exist')
+                return
+            }
+        }
+        addItemToDom(item)
+        addToStorage(item)
         itemInput.value = ""
+        checkUI()
         
 }
-function addItem(text){
+function remove(item){
+    item.remove()
+    removeFromStorage(item.textContent)
+    checkUI()
+}
+function removeFromStorage(item){
+    let StorageItems = getItemsFromStorage()
+    StorageItems = StorageItems.filter(i => i!==item)
+    localStorage.setItem('items', JSON.stringify(StorageItems))
+}
+function addToStorage(item){
+    let StorageItems = getItemsFromStorage()
+    StorageItems.push(item)
+    localStorage.setItem('items', JSON.stringify(StorageItems))
+}
+function exist(item){
+    const StorageItems = getItemsFromStorage()
+    return StorageItems.includes(item)
+}
+function getItemsFromStorage(){
+    let StorageItems = localStorage.getItem('items')
+    if(StorageItems === null)
+        StorageItems = []
+    else
+        StorageItems = JSON.parse(StorageItems)
+    return StorageItems
+}
+function displayItems(){
+    let StorageItems = getItemsFromStorage()
+    StorageItems.forEach( item => addItemToDom(item))
+    checkUI()
+}
+function addItemToDom(text){
     const li = document.createElement('li')
     li.appendChild(document.createTextNode(text))
     const btn = createButton()
     li.appendChild(btn)
-    return li;
+    itemList.appendChild(li)
 }
 function createButton(){
     const btn = document.createElement('button')
@@ -41,17 +85,34 @@ function createI(){
     i.classList = iClasses
     return i ;
 }
+function onClear(){
+    localStorage.removeItem('items')
+    clear()
+}
 function clear(){
     while(itemList.firstChild)
         itemList.removeChild(itemList.firstChild)
     checkUI()
 }
-function remove(e){
-    if(e.target.parentElement.classList.contains('remove-item'))
-        e.target.parentElement.parentElement.remove()
-    checkUI()
+function onClickItem(e){
+    if(e.target.parentElement.classList.contains('remove-item')){
+        remove(e.target.parentElement.parentElement)
+    }else{
+        editItem(e.target)
+    }
 }
+function editItem(item){
+    editMode = true
+    itemList.querySelectorAll('li')
+    .forEach(i => i.classList.remove('edit-mode'))
+    item.classList.add('edit-mode')
+    itemInput.value = item.textContent
+    itemBtn.innerHTML = '<i class = "fa-solid fa-pen"></i>   Update Item'
+    itemBtn.style.backgroundColor = '#228b22'
+}
+
 function checkUI(){
+    itemInput.value=''
     const items = itemList.querySelectorAll('li')
     if(items.length === 0){
         clearBtn.style.display = 'none'
@@ -60,6 +121,11 @@ function checkUI(){
         clearBtn.style.display = 'block'
         filter.style.display = 'block'
     }
+    if(editMode){
+        itemBtn.style.backgroundColor = "#333"
+        itemBtn.innerHTML = '<i class = "fa-solid fa-plus"></i>  Add Item'
+    }
+    editMode = false
 }
 function filterItems(e){
     const fil = e.target.value.toLowerCase()
@@ -73,11 +139,15 @@ function filterItems(e){
     })
 }
 
+function init(){
 itemForm.addEventListener('submit',add)
-clearBtn.addEventListener('click', clear)
-itemList.addEventListener('click', remove)
+clearBtn.addEventListener('click', onClear)
+itemList.addEventListener('click', onClickItem)
 filter.addEventListener('input', filterItems)
+document.addEventListener('DOMContentLoaded', displayItems)
 checkUI()
+}
+init()
 
 
 
